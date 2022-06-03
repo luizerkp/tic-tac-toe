@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="css/normalize.css">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <script src="scripts/script.js" defer></script>
+    <title>Tic Tac Toe</title>
+</head>
+<body>
+    <header class="header">
+        <h1>Tic Tac Toe</h1>
+        <div class="choices">
+            <select name="difficulty-menu" id="difficulty-level">
+                <option value="disabled"  selected disabled>Difficulty</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+                <option value="impossible">Impossible</option>
+            </select>
+            <button id="start">Start</button>
+            <button id="reset-button">Reset</button>
+            <select name="weapon" id="weapons">
+                <option value="disabled"  selected disabled>Weapon</option>
+                <option value="x">X</option>
+                <option value="o">O</option>
+            </select>
+        </div>
+    </header>
+    <main class="container">
+        <div id="placeholder">
+            <h2>Make Your Selections and Start...</h2>
+        </div>
+        <div class="board inactive">
+            <div class="cell" data-row = "0" data-col="1"></div>
+            <div class="cell" data-row = "0" data-col="2"></div>
+            <div class="cell" data-row = "0" data-col="3"></div>
+            <div class="cell" data-row = "1" data-col="1"></div>
+            <div class="cell" data-row = "1" data-col="2"></div>
+            <div class="cell" data-row = "1" data-col="3"></div>
+            <div class="cell" data-row = "2" data-col="1"></div>
+            <div class="cell" data-row = "2" data-col="2"></div>
+            <div class="cell" data-row = "2" data-col="3"></div>
+        </div>
+    </main>        
+    <footer>
+        <div class="footer"></div>
+    </footer>         
+</body>
+</html>
