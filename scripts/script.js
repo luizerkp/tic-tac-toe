@@ -33,13 +33,13 @@ var Selections = (function() {
         }
 
         // if user changes the selection values using devtools, reload the page
-        if (!checkValidSelectionsValues(weaponSelection.value, difficultySelection.value)) {
+        if (!validate.checkValidSelectionsValues(weaponSelection.value, difficultySelection.value)) {
             return window.location.reload();
         };
 
         displayController.startDisplay(weaponSelection, difficultySelection, startButton);
 
-        return game.start(weaponSelection.value, difficultySelection.value);
+        return game.start(weaponSelection.value);
     });
 
     resetButton.addEventListener('click', function() {
@@ -57,8 +57,7 @@ var game = (function (){
     // i.e. gameBoard[0][0] is the top left corner of the board
     let gameBoard;
 
-
-    const start = (chosenWeapon, chosenDifficulty) => {
+    const start = (chosenWeapon) => {
         player.setPlayer(chosenWeapon);
         computer.setComputer((chosenWeapon === 'x') ? 'o' : 'x');
         // difficulty = chosenDifficulty;
@@ -71,10 +70,6 @@ var game = (function (){
         cells.forEach(cell => {
             cell.addEventListener('click', function() {
                 
-                if (checkGameOver() || winner !== null) {
-                    alert('oOPS! someone already won game will be reset');
-                    return window.location.reload();
-                }
                 if (cell.textContent !== '') {
                     return;
                 }  
@@ -86,14 +81,14 @@ var game = (function (){
                 winner = checkWinner.decideWinner(gameBoard);
 
                 // allow the computer to make a move
-                if (!checkGameOver() && winner === null) {
+                if (winner === null) {
                     computer.computerTurn(gameBoard);
                     winner = checkWinner.decideWinner(gameBoard);
                 }
 
                 if (winner !== null) {
                     if (winner !== "tie") {
-                    displayController.displayWinningCells();
+                        displayController.displayWinningCells();
                     }
 
                     end();
@@ -115,39 +110,45 @@ var game = (function (){
         return false;
     }
 
-
     const end = async () => {
         // wait .5 seconds before displaying the modal
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 700));
         // end game and declare winner
         const modal = document.querySelector('.modal');
         const playAgainBtn = document.querySelector('.playAgainBtn');
         
         let playAgainText = document.querySelector('.playAgainText');
     
-        if (player.getPlayerMark() === this.winner) {
+        if (player.getPlayerMark() === winner) {
             playAgainText.textContent = "You Won!";
         }
-        else if (computer.getComputerMark() === this.winner) {
+        else if (computer.getComputerMark() === winner) {
             playAgainText.textContent = "You Lost!";
         }
         else {
             playAgainText.textContent = "It's a Tie!";
         }
     
-        modal.classList.toggle("show-modal");
+        modal.classList.add("show-modal");
         
         playAgainBtn.addEventListener('click', () => {
-            window.location.reload();
+            modal.classList.remove("show-modal");
+            return cleanUp.cleanUpBoard(player.getPlayerMark());
         }); 
+    }
+
+    const resetGame = () => {
+        // reset game
+        winner = null;
+        gameBoard = null;
     }
 
     return {
         start: start,
         updateBoard: updateBoard,
         checkGameOver: checkGameOver,
+        resetGame: resetGame
     };
-
 })();
 
 var board = (function() {
@@ -165,27 +166,32 @@ var board = (function() {
     }
 })();
 
-// helper functions to check if user has changed the selection values via devtools
-function checkValidSelectionsValues(weaponScelectionValue, difficultySelectionValue) {
-    let valid = true;
-    
-    weaponScelectionValue = weaponScelectionValue.toLowerCase();
-    difficultySelectionValue = difficultySelectionValue.toLowerCase();
+var validate = (function() {
+    // helper functions to check if user has changed the selection values via devtools
+    function checkValidSelectionsValues(weaponScelectionValue, difficultySelectionValue) {
+        let valid = true;
+        
+        weaponScelectionValue = weaponScelectionValue.toLowerCase();
+        difficultySelectionValue = difficultySelectionValue.toLowerCase();
 
-    // current selection values for #weapons and #difficulty-level
-    const difficulties = ['easy', 'medium', 'hard', 'impossible'];
-    const weapons = ['x', 'o'];
-    
-    if (!difficulties.includes(difficultySelectionValue)){
-        valid = false;
-        alert("Please do not change selection values for difficulty level. This page will be reloaded");
-    } else if (!weapons.includes(weaponScelectionValue)) {
-        valid = false;
-        alert("Please do not change selection values for weapon. This page will be reloaded");
+        // current selection values for #weapons and #difficulty-level
+        const difficulties = ['easy', 'medium', 'hard', 'impossible'];
+        const weapons = ['x', 'o'];
+        
+        if (!difficulties.includes(difficultySelectionValue)){
+            valid = false;
+            alert("Please do not change selection values for difficulty level. This page will be reloaded");
+        } else if (!weapons.includes(weaponScelectionValue)) {
+            valid = false;
+            alert("Please do not change selection values for weapon. This page will be reloaded");
+        }
+
+        return valid;
     }
-
-    return valid;
-}
+    return {
+        checkValidSelectionsValues: checkValidSelectionsValues
+    }
+})();
 
 var displayController = (function() {
     const board = document.querySelector('.board');
@@ -208,7 +214,6 @@ var displayController = (function() {
     }
     const displayWinningCells = () => {
         const winningCells = checkWinner.getWinningCells();
-        // console.log(winningCells);
         const first = document.querySelector(`[data-row="${winningCells["first"][0]}"][data-col="${winningCells["first"][1]}"`);
         const second = document.querySelector(`[data-row="${winningCells["second"][0]}"][data-col="${winningCells["second"][1]}"`);
         const third = document.querySelector(`[data-row="${winningCells["third"][0]}"][data-col="${winningCells["third"][1]}"`);
@@ -239,13 +244,19 @@ var player = (function() {
         cell.appendChild(para);
         game.updateBoard(row, col, playerMark);
     }
+
     const getPlayerMark = () => {
         return playerMark;
+    }
+
+    const resetPlayer = () => {
+        playerMark = null;
     }
     return {
         setPlayer: setPlayer,
         playerTurn: playerTurn,
-        getPlayerMark: getPlayerMark
+        getPlayerMark: getPlayerMark,
+        resetPlayer: resetPlayer
     }
 
 })();
@@ -277,9 +288,7 @@ var computer = (function() {
         }
 
         game.updateBoard(row, col, computerMark);
-
         return [row, col];
-        
     }
 
     const displayComputerMove = (computerMove) => {
@@ -294,10 +303,16 @@ var computer = (function() {
         return computerMark;
     }
 
+    const resetComputer = () => {
+        computerMove = null;
+        computerMark = null;
+    }
+
     return {
         computerTurn: computerTurn,
         setComputer: setComputer,
-        getComputerMark: getComputerMark
+        getComputerMark: getComputerMark,
+        resetComputer: resetComputer
     };
 })();
 
@@ -311,14 +326,48 @@ var checkWinner = (function() {
     }
     
     const decideWinner = (currentBoard) => {
-        // check for horizontal win
-        checkHorizontalWin(currentBoard);
 
-        // check for vertical win
-        checkVerticalWin(currentBoard);
-        
-        // check for diagonal win
-        checkDiagonalWin(currentBoard);
+        for (let i = 0; i < 3; i++) {
+            // loads the current row
+            let horizontal = [currentBoard[i][0], currentBoard[i][1], currentBoard[i][2]];
+
+            // checks if current row is a potential winner
+            let possibleHorizontalWin= horizontal.every(function(value) { return value !== null ? true : false; });
+
+            // loads the current column
+            let vertical = [currentBoard[0][i], currentBoard[1][i], currentBoard[2][i]];
+
+            // checks if current column is a potential winner
+            let possibleVerticalWin = vertical.every(function(value) { return value !== null ? true : false; });
+
+            // i = 0 => first row
+            if (possibleHorizontalWin === true) {
+                // check for horizontal win
+                checkHorizontalWin(horizontal, i);
+            };
+
+            // i = 0 => first column
+            if (possibleVerticalWin === true) {
+                // check for vertical win
+                checkVerticalWin(vertical, i);
+            } 
+        }   
+ 
+        // check for a possbile diagonal win top left to bottom right
+        let diagonalTopLeftBottomRight = [currentBoard[0][0], currentBoard[1][1], currentBoard[2][2]];
+        let possibleDiagonalTopLeftBottomRightWin = diagonalTopLeftBottomRight.every(function(value) { return value !== null ? true : false; });
+
+        // check for a possbile diagonal win top right to bottom left
+        let diagonalTopRightBottomLeft = [currentBoard[0][2], currentBoard[1][1], currentBoard[2][0]];
+        let possibleDiagonalTopRightBottomLeftWin = diagonalTopRightBottomLeft.every(function(value) { return value !== null ? true : false; });
+
+        if (possibleDiagonalTopLeftBottomRightWin === true) {
+            checkDiagonalWinTopLeftToBottomRight(diagonalTopLeftBottomRight);
+        };
+
+        if (possibleDiagonalTopRightBottomLeftWin === true) {
+            checkDiagonalWinTopRightToBottomLeft(diagonalTopRightBottomLeft);
+        };
         
         // check for draw
         checkDraw(currentBoard);
@@ -328,53 +377,57 @@ var checkWinner = (function() {
     }
 
     // check for horizontal win
-    const checkHorizontalWin = (currentBoard) => {   
-        // i = row
-        for (let i = 0; i < 3; i++) {
-            if (currentBoard[i][0] === currentBoard[i][1] && currentBoard[i][1] === currentBoard[i][2]) {
-                winner = currentBoard[i][0];
+    const checkHorizontalWin = (horizontalWin, row) => {   
 
-                let j = 0;
-                while (j < 3) {
-                    winningCells[cells[j]] = [i, j];
-                    j++;
-                }
+        if (horizontalWin[0] === horizontalWin[1] && horizontalWin[1] === horizontalWin[2]) {
+            winner = horizontalWin[0];
+
+            // populate winning cells 
+            let j = 0;
+
+            while (j < 3) {
+                winningCells[cells[j]] = [row, j];
+                j++;
             }
         }
+
     };
 
     // check for vertical win
-    const checkVerticalWin = (currentBoard) => {
-        // i = column   
-        for (let i = 0; i < 3; i++) {
-            if (currentBoard[0][i] === currentBoard[1][i] && currentBoard[1][i] === currentBoard[2][i]) {
-                winner = currentBoard[0][i];
+    const checkVerticalWin = (verticalWin, col) => {
 
-                let j = 0;
-                while (j < 3) {
-                    winningCells[cells[j]] = [j, i];
-                    j++;
-                }
+        if (verticalWin[0] === verticalWin[1] && verticalWin[1] === verticalWin[2]) {
+            winner = verticalWin[0];
+
+            let j = 0;
+            while (j < 3) {
+                winningCells[cells[j]] = [j, col];
+                j++;
             }
         }
+    
     }
 
     // check for diagonal win
-    const checkDiagonalWin = (currentBoard) => {
-        if (currentBoard[0][0] === currentBoard[1][1] && currentBoard[1][1] === currentBoard[2][2]) {
-            winner = currentBoard[0][0];
+    const checkDiagonalWinTopLeftToBottomRight = (diagonalWin) => {
+        if (diagonalWin[0] === diagonalWin[1] && diagonalWin[1] === diagonalWin[2]) {
+            winner = diagonalWin[0];
 
             let j = 0;
+
             while (j < 3) {
                 winningCells[cells[j]] = [j, j];
                 j++;
             }
         } 
-        // check for diagonal win top right to bottom left
-        else if (currentBoard[0][2] === currentBoard[1][1] && currentBoard[1][1] === currentBoard[2][0]) {
-            winner = currentBoard[0][2];
+    }
+
+    const checkDiagonalWinTopRightToBottomLeft = (diagonalWin) => {
+        if (diagonalWin[0] === diagonalWin[1] && diagonalWin[1] === diagonalWin[2]) {
+            winner = diagonalWin[0];
 
             let j = 0;
+
             while (j < 3) {
                 winningCells[cells[j]]= [j, (2 - j)];
                 j++;
@@ -394,12 +447,62 @@ var checkWinner = (function() {
         return winningCells;
     }
 
+    const resetCheckWinner = () => {
+        winningCells = {
+            first: null,
+            second: null,
+            third: null,
+        }
+
+        winner = null;
+    }
+
     return {
         decideWinner: decideWinner,
-        getWinningCells: getWinningCells
+        getWinningCells: getWinningCells,
+        resetCheckWinner: resetCheckWinner
     }
 
 })();
+
+var cleanUp = (function() {
+    // clears the board while keeping selected options
+    const cleanUpBoard = (mark) => {
+        const cells = document.querySelectorAll('.cell');
+        cells.forEach(cell => {
+            cell.innerHTML = '';
+            cell.classList.remove('winning-cell');
+        });
+
+        cleanUpCheckWinner();
+        cleanUpComputer();
+        cleanUpPlayer();
+        cleanUpGame();
+        game.start(mark.toLowerCase());
+    }
+
+    const cleanUpCheckWinner = () => {
+        // clean up checkWinner
+        checkWinner.resetCheckWinner();
+    }
+
+    const cleanUpComputer = () => {
+        computer.resetComputer();
+    }
+
+    const cleanUpPlayer = () => {
+        player.resetPlayer();
+    }
+
+    const cleanUpGame = () => {
+        game.resetGame();
+    }
+
+
+    return {
+        cleanUpBoard: cleanUpBoard
+    }
+})()
 
 
 

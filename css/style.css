@@ -30,6 +30,7 @@ body {
     justify-content: center;
     align-items: center;
 }
+
 .inactive {
     display: none !important;
 }
@@ -64,10 +65,12 @@ body {
     width: 400px;
     height: 400px;
 }
+
 .cell>p {
     margin: 0;
     padding: 10px;
 }
+
 .cell {
     display: grid;
     align-items: center;
@@ -83,6 +86,7 @@ body {
     cursor: pointer;
 
 }
+
 .player-mark, .computer-mark {
     font-size: 4rem;
     font-weight: bold;
@@ -126,7 +130,7 @@ body {
     border-radius: 0.5rem;
     font-size: 15px;
     font-weight: bolder;
-    background-color: rgba(52, 152, 219, 0.5);
+    background-color: rgba(133, 193, 233, 0.5);
     color: #F9FAF8;
 }
 
@@ -140,10 +144,12 @@ body {
     color: #F9FAF8;
     background-color: rgba(52, 152, 219, 0.7);
     border: 2px solid #0d0e0d;
-    padding: 0.75rem 1rem;
-    
+    padding: 0.75rem 1rem;    
 }
 
+.playAgainText {
+    color: #17202A;
+}
 .close-button:hover {
     opacity: 75%;
     border: solid 1px #F9FAF8;
