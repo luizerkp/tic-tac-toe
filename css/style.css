@@ -23,6 +23,9 @@ body {
     justify-content: center;
     column-gap: 3rem;
 }
+.choices > select, .choices > button {
+    cursor: pointer;
+}
 
 .container {
     display: flex;
@@ -71,11 +74,18 @@ body {
     padding: 10px;
 }
 
+.locked {
+    pointer-events: none;
+}
+
+.wait {
+    cursor: wait !important;
+}
+
 .cell {
     display: grid;
     align-items: center;
     justify-content: center;
-    font-size: large;
     width: 100%;
     height: 100%;
     border: solid 4px black;
@@ -150,6 +160,7 @@ body {
 .playAgainText {
     color: #17202A;
 }
+
 .close-button:hover {
     opacity: 75%;
     border: solid 1px #F9FAF8;

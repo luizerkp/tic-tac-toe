@@ -17,8 +17,6 @@ var buildFooter = (function() {
     footer.appendChild(footerPara_2);
 })();
 
-
-
 var Selections = (function() {
     const startButton = document.querySelector('#start');
     const resetButton = document.querySelector('#reset-button');
@@ -39,7 +37,7 @@ var Selections = (function() {
 
         displayController.startDisplay(weaponSelection, difficultySelection, startButton);
 
-        return game.start(weaponSelection.value);
+        return game.start(weaponSelection.value, difficultySelection.value);
     });
 
     resetButton.addEventListener('click', function() {
@@ -49,24 +47,23 @@ var Selections = (function() {
 })();
 
 var game = (function (){
-    // let difficulty;
-
+    let difficulty = null;
     let winner = null;
 
     // gameBoard is an array of 9 elements, each element is a string first dimension is row, second is column
     // i.e. gameBoard[0][0] is the top left corner of the board
     let gameBoard;
+    const cells = document.querySelectorAll('.cell');
 
-    const start = (chosenWeapon) => {
+    const start = (chosenWeapon, chosenDifficulty) => {
         player.setPlayer(chosenWeapon);
         computer.setComputer((chosenWeapon === 'x') ? 'o' : 'x');
-        // difficulty = chosenDifficulty;
+        difficulty = chosenDifficulty;
         gameBoard = board.createBoard();
         addCellEvents();
     }
 
     const addCellEvents = () => {
-        const cells = document.querySelectorAll('.cell');
         cells.forEach(cell => {
             cell.addEventListener('click', function() {
                 
@@ -80,9 +77,12 @@ var game = (function (){
                 player.playerTurn(row, col);
                 winner = checkWinner.decideWinner(gameBoard);
 
+                // lock click events on board while computer is making a move
+                gameFlow.lockClick(cells);
+
                 // allow the computer to make a move
                 if (winner === null) {
-                    computer.computerTurn(gameBoard);
+                    computer.computerTurn(gameBoard, difficulty);
                     winner = checkWinner.decideWinner(gameBoard);
                 }
 
@@ -90,7 +90,6 @@ var game = (function (){
                     if (winner !== "tie") {
                         displayController.displayWinningCells();
                     }
-
                     end();
                 }
 
@@ -102,6 +101,10 @@ var game = (function (){
         gameBoard[row][col] = mark;
     };
 
+    const getCells = () => {
+        return cells;
+    };
+
     const checkGameOver = () => {
         // check if all cells are filled
         if (gameBoard.every(row => row.every(column => column !== null))) { 
@@ -111,7 +114,7 @@ var game = (function (){
     }
 
     const end = async () => {
-        // wait .5 seconds before displaying the modal
+        // wait .7 seconds before displaying the modal
         await new Promise(resolve => setTimeout(resolve, 700));
         // end game and declare winner
         const modal = document.querySelector('.modal');
@@ -146,6 +149,7 @@ var game = (function (){
     return {
         start: start,
         updateBoard: updateBoard,
+        getCells: getCells,
         checkGameOver: checkGameOver,
         resetGame: resetGame
     };
@@ -221,14 +225,26 @@ var displayController = (function() {
         second.classList.add('winning-cell');
         third.classList.add('winning-cell');
     }
+
+    const removeWinningCells = () => {
+        const winningCells = document.querySelectorAll('.winning-cell');
+        winningCells.forEach((cell) => {
+            cell.classList.remove('winning-cell');
+        });
+    }
+
+    const getBoard = () => {
+        return board;
+    }
     
     return {
         startDisplay: startDisplay,
         displayWinningCells: displayWinningCells,
+        removeWinningCells: removeWinningCells,
+        getBoard: getBoard
     }
 })();
 
-// test
 var player = (function() {
     let playerMark = null;
 
@@ -258,9 +274,7 @@ var player = (function() {
         getPlayerMark: getPlayerMark,
         resetPlayer: resetPlayer
     }
-
 })();
-
 
 var computer = (function() {
    let computerMove = null;
@@ -271,32 +285,53 @@ var computer = (function() {
         computerMark = mark.toUpperCase();
     }
 
-    const computerTurn = (currentBoard) => {
+    const computerTurn = (currentBoard, difficulty) => {
         // get computer move
-        computerMove = getComputerMove(currentBoard);
+        computerMove = getComputerMove(currentBoard, difficulty);
+        
+        // return;
         // display computer move
         displayComputerMove(computerMove);
     }
 
-    const getComputerMove = (currentBoard) => {
-        let row = Math.floor(Math.random() * 3);
-        let col = Math.floor(Math.random() * 3);
-
-        while (currentBoard[row][col] !== null) {
-            row = Math.floor(Math.random() * 3);
-            col = Math.floor(Math.random() * 3);
+    const getComputerMove = (currentBoard, difficulty) => {
+        let move = null;
+        switch (difficulty) {
+            case 'easy':
+                move = moves.getEasyMove(currentBoard);
+                break;
+            // case 'medium':
+            //     move = moves.getMediumMove(currentBoard);
+            //     break;
+            // case 'hard':
+            //     move = moves.getHardMove(currentBoard);
+            //     break;
+            case 'impossible':
+                move = moves.getImpossibleMove(currentBoard, computerMark);
+                break;
+            default:
+                move = moves.getEasyMove(currentBoard);
+                break;
         }
 
-        game.updateBoard(row, col, computerMark);
-        return [row, col];
+        // move[0] = row, move[1] = col
+        console.log(`Computer move: ${move[0]}, ${move[1]}`);
+        console.log(computerMark);
+        game.updateBoard(move[0], move[1], computerMark);
+        return move;
     }
 
-    const displayComputerMove = (computerMove) => {
+    const displayComputerMove = async (computerMove) => {
+        // wait .5 seconds before displaying the modal
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // display computer move
         const cell = document.querySelector(`[data-row="${computerMove[0]}"][data-col="${computerMove[1]}"]`);
         const para = document.createElement('p');
         para.textContent = computerMark;
         para.classList.add('computer-mark');
         cell.appendChild(para);
+        gameFlow.unlockClick();
     }
 
     const getComputerMark = () => {
@@ -326,7 +361,6 @@ var checkWinner = (function() {
     }
     
     const decideWinner = (currentBoard) => {
-
         for (let i = 0; i < 3; i++) {
             // loads the current row
             let horizontal = [currentBoard[i][0], currentBoard[i][1], currentBoard[i][2]];
@@ -378,7 +412,6 @@ var checkWinner = (function() {
 
     // check for horizontal win
     const checkHorizontalWin = (horizontalWin, row) => {   
-
         if (horizontalWin[0] === horizontalWin[1] && horizontalWin[1] === horizontalWin[2]) {
             winner = horizontalWin[0];
 
@@ -395,7 +428,6 @@ var checkWinner = (function() {
 
     // check for vertical win
     const checkVerticalWin = (verticalWin, col) => {
-
         if (verticalWin[0] === verticalWin[1] && verticalWin[1] === verticalWin[2]) {
             winner = verticalWin[0];
 
@@ -462,27 +494,21 @@ var checkWinner = (function() {
         getWinningCells: getWinningCells,
         resetCheckWinner: resetCheckWinner
     }
-
 })();
 
 var cleanUp = (function() {
     // clears the board while keeping selected options
-    const cleanUpBoard = (mark) => {
-        const cells = document.querySelectorAll('.cell');
-        cells.forEach(cell => {
-            cell.innerHTML = '';
-            cell.classList.remove('winning-cell');
-        });
-
+    const cleanUpBoard = (mark, level) => {
+        cleanUpGameFlow();
+        cleanUpWinningCells();
         cleanUpCheckWinner();
         cleanUpComputer();
         cleanUpPlayer();
         cleanUpGame();
-        game.start(mark.toLowerCase());
+        game.start(mark.toLowerCase(), level);
     }
 
     const cleanUpCheckWinner = () => {
-        // clean up checkWinner
         checkWinner.resetCheckWinner();
     }
 
@@ -498,11 +524,161 @@ var cleanUp = (function() {
         game.resetGame();
     }
 
+    const cleanUpGameFlow = () => {
+        gameFlow.gameFlowReset();
+    }
+        
+    const cleanUpWinningCells = () => {
+        displayController.removeWinningCells();
+    }
 
     return {
         cleanUpBoard: cleanUpBoard
     }
 })()
 
+// locks out clicks on the board while computer is making a move or while winner is being decided
+var gameFlow = (function() {
+    const cells = game.getCells();
+    const board = displayController.getBoard();
+    // locks out clicks on the board while computer is making a move
+    const lockClick = () => {
+        board.classList.add("wait");
+        cells.forEach((cell) => {
+            cell.classList.add('locked');
+
+        });
+    }
+
+    // unlocks clicks on the board after computer has made a move
+    const unlockClick = () => { 
+        cells.forEach((cell) => {
+            cell.classList.remove('locked');
+        });
+        board.classList.remove("wait");
+    }
+
+    const gameFlowReset = () => {
+        cells.forEach((cell) => {
+            cell.classList.remove('locked');
+            cell.innerHTML = "";
+        });
+        board.classList.remove("wait");
+    }
+
+    return {
+        lockClick: lockClick,
+        unlockClick: unlockClick,
+        gameFlowReset: gameFlowReset
+    }
+})();
+
+var moves = (function() {
+
+    const getEasyMove = (currentBoard) => {
+        let row = Math.floor(Math.random() * 3);
+        let col = Math.floor(Math.random() * 3);
+
+        while (currentBoard[row][col] !== null) {
+            row = Math.floor(Math.random() * 3);
+            col = Math.floor(Math.random() * 3);
+        }
+        return [row, col];
+    }
+
+    const getImpossibleMove = (currentBoard, mark) => {
+        let move = minimax.getMinimaxMove(currentBoard, mark);
+        console.log(move);
+        return move;
+    }
 
 
+    return {
+        getEasyMove: getEasyMove,
+        getImpossibleMove: getImpossibleMove
+    }
+})()
+
+var minimax = (function() {
+    
+    const getMinimaxMove = (currentBoard, mark) => {    
+        let humanPlayer = player.getPlayerMark();
+        let computerPlayer = computer.getComputerMark();
+        let bestMove = null;
+        let availableMoves = getMoves(currentBoard);
+        console.log(availableMoves);
+
+        let winner = checkWinner.decideWinner(currentBoard) 
+        // console.log(winner === humanPlayer);
+        if (winner === humanPlayer) {
+            return {score: -10};
+        } else if (winner === computerPlayer) {
+            return {score: 10};
+        } else if (availableMoves.length === 0) {
+            return {score: 0};
+        }
+        let moves = [];
+        availableMoves.forEach((availabelMove) => {
+            let move = {};
+            move.row = availabelMove[0];
+            move.col = availabelMove[1];
+            currentBoard[move.row][move.col] = player;
+            if (mark === computerPlayer) {
+                let result = getMinimaxMove(currentBoard, humanPlayer);
+                move.score = result.score;
+            } else {
+                let result = getMinimaxMove(currentBoard, computerPlayer);
+                move.score = result.score;
+            }
+            currentBoard[move.row][move.col] = null;
+            moves.push(move);
+        });
+
+        bestMove = getBestMove(moves, mark);
+        console.log(bestMove);
+        return bestMove;
+    }
+    
+    const getMoves = (currentBoard) => {
+        // get all available moves
+        let moves = [];
+
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (currentBoard[i][j] === null) {
+                    moves.push([i, j]);
+                }
+            }
+        }
+
+        console.log("moves: " + moves);
+        return moves;
+    }
+    
+    const getBestMove = (moves, mark) => {
+        // get the best move
+        let bestMove = null;
+        if(mark === computer.getComputerMark()) {
+            let bestScore = -Infinity;
+            moves.forEach((move) => {
+                if (move.score > bestScore) {
+                    bestScore = move.score;
+                    bestMove = move;
+                }
+            });
+        } else {
+            let bestScore = Infinity;
+            moves.forEach((move) => {
+                if (move.score < bestScore) {
+                    bestScore = move.score;
+                    bestMove = move;
+                }
+            });
+        }
+        return bestMove;
+    }
+
+    return {
+        getMinimaxMove: getMinimaxMove
+    }
+})()
