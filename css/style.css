@@ -111,6 +111,13 @@ body {
     border: solid 4px green !important;
 }
 
+.tie {
+    background-color: #747272 !important;
+    border: solid 4px #fdfdfd !important;
+}
+
+
+
 /* Styles the modal popup box and its content */
 .modal {
     position: fixed;

@@ -50,16 +50,15 @@ var game = (function (){
     let difficulty = null;
     let winner = null;
 
-    // gameBoard is an array of 9 elements, each element is a string first dimension is row, second is column
-    // i.e. gameBoard[0][0] is the top left corner of the board
-    let gameBoard;
+    // gameBoard is an array of 9 elements that represent the 9 boxes on the game board i.e. gameBoard[0] = top left box
+    let gameBoard = null;
     const cells = document.querySelectorAll('.cell');
 
     const start = (chosenWeapon, chosenDifficulty) => {
         player.setPlayer(chosenWeapon);
         computer.setComputer((chosenWeapon === 'x') ? 'o' : 'x');
-        difficulty = chosenDifficulty;
         gameBoard = board.createBoard();
+        difficulty = chosenDifficulty;
         addCellEvents();
     }
 
@@ -69,63 +68,59 @@ var game = (function (){
                 
                 if (cell.textContent !== '') {
                     return;
-                }  
+                }
 
-                let row = cell.getAttribute('data-row');
-                let col = cell.getAttribute('data-col');
+                let cellNumber = cell.getAttribute('data-cell');
+                cellNumber = parseInt(cellNumber);
 
-                player.playerTurn(row, col);
-                winner = checkWinner.decideWinner(gameBoard);
+                player.playerTurn(cellNumber);
+                winner= checkWinner.decideWinner(gameBoard, player.getPlayerMark());       
 
                 // lock click events on board while computer is making a move
                 gameFlow.lockClick(cells);
-
+                // console.log(winner);
                 // allow the computer to make a move
                 if (winner === null) {
                     computer.computerTurn(gameBoard, difficulty);
-                    winner = checkWinner.decideWinner(gameBoard);
-                }
+                    winner = checkWinner.decideWinner(gameBoard, computer.getComputerMark());
+                } 
 
                 if (winner !== null) {
-                    if (winner !== "tie") {
+                    if (winner !== 'tie') {
                         displayController.displayWinningCells();
+                    } else {
+                        displayController.displayTie();
                     }
-                    end();
+                    end(winner);
                 }
-
             });
         });
     }
     
-    const updateBoard = (row, col, mark) => {
-        gameBoard[row][col] = mark;
+    const updateBoard = (number, mark) => {
+        gameBoard[number] = mark;
+        // console.log(gameBoard);
     };
 
     const getCells = () => {
         return cells;
     };
 
-    const checkGameOver = () => {
-        // check if all cells are filled
-        if (gameBoard.every(row => row.every(column => column !== null))) { 
-            return true;
-        }
-        return false;
-    }
-
-    const end = async () => {
+    const end = async (mark) => {
         // wait .7 seconds before displaying the modal
         await new Promise(resolve => setTimeout(resolve, 700));
+
+        // console.log(mark);
         // end game and declare winner
         const modal = document.querySelector('.modal');
         const playAgainBtn = document.querySelector('.playAgainBtn');
         
         let playAgainText = document.querySelector('.playAgainText');
     
-        if (player.getPlayerMark() === winner) {
+        if (player.getPlayerMark() === mark) {
             playAgainText.textContent = "You Won!";
         }
-        else if (computer.getComputerMark() === winner) {
+        else if (computer.getComputerMark() === mark) {
             playAgainText.textContent = "You Lost!";
         }
         else {
@@ -150,17 +145,16 @@ var game = (function (){
         start: start,
         updateBoard: updateBoard,
         getCells: getCells,
-        checkGameOver: checkGameOver,
         resetGame: resetGame
     };
 })();
 
 var board = (function() {
-    let board = new Array(3).fill(null);
+    let board = new Array(9).fill(null);
 
     const createBoard = () => {
-        for (let i = 0; i < 3; i++) {
-            board[i] = new Array(3).fill(null);
+        for (let i = 0; i < 9; i++) {
+            board[i] = i;
         }
         return board;
     }
@@ -200,6 +194,7 @@ var validate = (function() {
 var displayController = (function() {
     const board = document.querySelector('.board');
     const placeHolder = document.querySelector('#placeholder');
+    const cells = game.getCells();
     
     const startDisplay = (weaponSelection, difficultySelection, startButton) => {
         displayBoard();
@@ -218,18 +213,25 @@ var displayController = (function() {
     }
     const displayWinningCells = () => {
         const winningCells = checkWinner.getWinningCells();
-        const first = document.querySelector(`[data-row="${winningCells["first"][0]}"][data-col="${winningCells["first"][1]}"`);
-        const second = document.querySelector(`[data-row="${winningCells["second"][0]}"][data-col="${winningCells["second"][1]}"`);
-        const third = document.querySelector(`[data-row="${winningCells["third"][0]}"][data-col="${winningCells["third"][1]}"`);
+        const first = document.querySelector(`[data-cell="${winningCells["first"]}"]`);
+        const second = document.querySelector(`[data-cell="${winningCells["second"]}"]`);
+        const third = document.querySelector(`[data-cell="${winningCells["third"]}"]`);
         first.classList.add('winning-cell');
         second.classList.add('winning-cell');
         third.classList.add('winning-cell');
     }
 
+    const displayTie = () => {
+        cells.forEach(cell => {
+            cell.classList.add('tie');
+        });
+    }
+
+
     const removeWinningCells = () => {
-        const winningCells = document.querySelectorAll('.winning-cell');
-        winningCells.forEach((cell) => {
+        cells.forEach((cell) => {
             cell.classList.remove('winning-cell');
+            cell.classList.remove('tie');
         });
     }
 
@@ -240,6 +242,7 @@ var displayController = (function() {
     return {
         startDisplay: startDisplay,
         displayWinningCells: displayWinningCells,
+        displayTie: displayTie,
         removeWinningCells: removeWinningCells,
         getBoard: getBoard
     }
@@ -252,13 +255,14 @@ var player = (function() {
         playerMark = mark.toUpperCase();
     }
 
-    const playerTurn = (row, col) => {
-        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+    const playerTurn = (number) => {
+        // console.log(`Player ${playerMark} has chosen cell ${number}`);
+        const cell = document.querySelector(`[data-cell="${number}"]`);
         const para = document.createElement('p');
         para.textContent = playerMark;
         para.classList.add('player-mark');
         cell.appendChild(para);
-        game.updateBoard(row, col, playerMark);
+        game.updateBoard(number, playerMark);
     }
 
     const getPlayerMark = () => {
@@ -315,18 +319,19 @@ var computer = (function() {
         }
 
         // move[0] = row, move[1] = col
-        console.log(`Computer move: ${move[0]}, ${move[1]}`);
-        console.log(computerMark);
-        game.updateBoard(move[0], move[1], computerMark);
+        // console.log(`Computer move: ${move[0]}, ${move[1]}`);
+        // console.log(computerMark);
+        game.updateBoard(move, computerMark);
         return move;
     }
 
     const displayComputerMove = async (computerMove) => {
+        // console.log(`Computer move: ${computerMove}`);
         // wait .5 seconds before displaying the modal
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // display computer move
-        const cell = document.querySelector(`[data-row="${computerMove[0]}"][data-col="${computerMove[1]}"]`);
+        const cell = document.querySelector(`[data-cell="${computerMove}"]`);
         const para = document.createElement('p');
         para.textContent = computerMark;
         para.classList.add('computer-mark');
@@ -353,124 +358,101 @@ var computer = (function() {
 
 var checkWinner = (function() {
     let winner = null;
+    
+
     const cells = ["first", "second" , "third"];
     let winningCells = {
         first: null,
         second: null,
         third: null,
     }
-    
-    const decideWinner = (currentBoard) => {
-        for (let i = 0; i < 3; i++) {
-            // loads the current row
-            let horizontal = [currentBoard[i][0], currentBoard[i][1], currentBoard[i][2]];
 
-            // checks if current row is a potential winner
-            let possibleHorizontalWin= horizontal.every(function(value) { return value !== null ? true : false; });
+    const winningHorizontalCombos = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8]
+    ];
+
+    const winningVerticalCombos = [
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8]
+    ];
+    
+    const decideWinner = (currentBoard, currentPlayer) => {
+        // console.log(currentBoard);
+        for (let i = 0; i < 3; i++) {
+
+            // loads the current row
+            let horizontal = [currentBoard[winningHorizontalCombos[i][0]], currentBoard[winningHorizontalCombos[i][1]], currentBoard[winningHorizontalCombos[i][2]]];
+
+            // checks if player has won horizontally
+            let horizontalWin= horizontal.every(function(value) { return value === currentPlayer ? true : false; });
 
             // loads the current column
-            let vertical = [currentBoard[0][i], currentBoard[1][i], currentBoard[2][i]];
+            let vertical = [currentBoard[winningVerticalCombos[i][0]], currentBoard[winningVerticalCombos[i][1]], currentBoard[winningVerticalCombos[i][2]]]; 
 
-            // checks if current column is a potential winner
-            let possibleVerticalWin = vertical.every(function(value) { return value !== null ? true : false; });
+            // checks if player has won vertically
+            let verticalWin = vertical.every(function(value) { return value === currentPlayer ? true : false; });
 
-            // i = 0 => first row
-            if (possibleHorizontalWin === true) {
-                // check for horizontal win
-                checkHorizontalWin(horizontal, i);
+            if (horizontalWin === true) {
+                winner = horizontal[0];
+                winningCells.first = winningHorizontalCombos[i][0];
+                winningCells.second = winningHorizontalCombos[i][1];
+                winningCells.third = winningHorizontalCombos[i][2];
             };
 
-            // i = 0 => first column
-            if (possibleVerticalWin === true) {
-                // check for vertical win
-                checkVerticalWin(vertical, i);
+            if (verticalWin === true) {
+                winner = vertical[0];
+                winningCells.first = winningVerticalCombos[i][0];
+                winningCells.second = winningVerticalCombos[i][1];
+                winningCells.third = winningVerticalCombos[i][2];
             } 
         }   
  
-        // check for a possbile diagonal win top left to bottom right
-        let diagonalTopLeftBottomRight = [currentBoard[0][0], currentBoard[1][1], currentBoard[2][2]];
-        let possibleDiagonalTopLeftBottomRightWin = diagonalTopLeftBottomRight.every(function(value) { return value !== null ? true : false; });
+        // loads top left to bottom right diagonal
+        let diagonalTopLeftBottomRight = [currentBoard[0], currentBoard[4], currentBoard[8]];
 
-        // check for a possbile diagonal win top right to bottom left
-        let diagonalTopRightBottomLeft = [currentBoard[0][2], currentBoard[1][1], currentBoard[2][0]];
-        let possibleDiagonalTopRightBottomLeftWin = diagonalTopRightBottomLeft.every(function(value) { return value !== null ? true : false; });
+        // checks if player has won top left to bottom right diagonal
+        let diagonalTopLeftBottomRightWin = diagonalTopLeftBottomRight.every(function(value) { return value === currentPlayer ? true : false; });
 
-        if (possibleDiagonalTopLeftBottomRightWin === true) {
-            checkDiagonalWinTopLeftToBottomRight(diagonalTopLeftBottomRight);
+        // loads top right to bottom left diagonal
+        let diagonalTopRightBottomLeft = [currentBoard[2], currentBoard[4], currentBoard[6]];
+
+        // checks if player has won top right to bottom left diagonal
+        let diagonalTopRightBottomLeftWin = diagonalTopRightBottomLeft.every(function(value) { return value === currentPlayer ? true : false; });
+
+        if (diagonalTopLeftBottomRightWin === true) {
+            winner = diagonalTopLeftBottomRight[0];
+
+            // top left to bottom right = [0, 4, 8]
+            winningCells.first = 0;
+            winningCells.second = 4;
+            winningCells.third = 8;
         };
 
-        if (possibleDiagonalTopRightBottomLeftWin === true) {
-            checkDiagonalWinTopRightToBottomLeft(diagonalTopRightBottomLeft);
-        };
-        
-        // check for draw
-        checkDraw(currentBoard);
+        if (diagonalTopRightBottomLeftWin === true) {
+            winner = diagonalTopRightBottomLeft[0];
 
+            // top right to bottom left = [2, 4, 6]
+            winningCells.first = 2;
+            winningCells.second = 4;
+            winningCells.third = 6;
+        };
+
+        // only check for draw if no winner has been found
+        if (winner === null) {
+            checkDraw(currentBoard);
+        }
+
+        // console.log(`Winner: ${this.winner}`);
         return winner;
+    }
         
-    }
-
-    // check for horizontal win
-    const checkHorizontalWin = (horizontalWin, row) => {   
-        if (horizontalWin[0] === horizontalWin[1] && horizontalWin[1] === horizontalWin[2]) {
-            winner = horizontalWin[0];
-
-            // populate winning cells 
-            let j = 0;
-
-            while (j < 3) {
-                winningCells[cells[j]] = [row, j];
-                j++;
-            }
-        }
-
-    };
-
-    // check for vertical win
-    const checkVerticalWin = (verticalWin, col) => {
-        if (verticalWin[0] === verticalWin[1] && verticalWin[1] === verticalWin[2]) {
-            winner = verticalWin[0];
-
-            let j = 0;
-            while (j < 3) {
-                winningCells[cells[j]] = [j, col];
-                j++;
-            }
-        }
-    
-    }
-
-    // check for diagonal win
-    const checkDiagonalWinTopLeftToBottomRight = (diagonalWin) => {
-        if (diagonalWin[0] === diagonalWin[1] && diagonalWin[1] === diagonalWin[2]) {
-            winner = diagonalWin[0];
-
-            let j = 0;
-
-            while (j < 3) {
-                winningCells[cells[j]] = [j, j];
-                j++;
-            }
-        } 
-    }
-
-    const checkDiagonalWinTopRightToBottomLeft = (diagonalWin) => {
-        if (diagonalWin[0] === diagonalWin[1] && diagonalWin[1] === diagonalWin[2]) {
-            winner = diagonalWin[0];
-
-            let j = 0;
-
-            while (j < 3) {
-                winningCells[cells[j]]= [j, (2 - j)];
-                j++;
-            }
-        } 
-    }
-
     // check for draw
-    const checkDraw = () => {
+    const checkDraw = (currentBoard) => {
         // draw = game is not over and no winner
-        if (game.checkGameOver() && winner === null) {
+        if (currentBoard.every(function(value) { return typeof(value) === "string" ? true : false; })) {
             winner = 'tie';
         }
     }
@@ -576,19 +558,17 @@ var gameFlow = (function() {
 var moves = (function() {
 
     const getEasyMove = (currentBoard) => {
-        let row = Math.floor(Math.random() * 3);
-        let col = Math.floor(Math.random() * 3);
+        let cell = Math.floor(Math.random() * 9);
 
-        while (currentBoard[row][col] !== null) {
-            row = Math.floor(Math.random() * 3);
-            col = Math.floor(Math.random() * 3);
+        while (typeof(currentBoard[cell]) !== "number") {
+            cell = Math.floor(Math.random() * 9);
         }
-        return [row, col];
+        return cell;
     }
 
     const getImpossibleMove = (currentBoard, mark) => {
         let move = minimax.getMinimaxMove(currentBoard, mark);
-        console.log(move);
+        // console.log(move);
         return move;
     }
 
@@ -601,66 +581,89 @@ var moves = (function() {
 
 var minimax = (function() {
     
-    const getMinimaxMove = (currentBoard, mark) => {    
+    const getMinimaxMove = (newBoard, mark) => {    
         let humanPlayer = player.getPlayerMark();
         let computerPlayer = computer.getComputerMark();
         let bestMove = null;
-        let availableMoves = getMoves(currentBoard);
-        console.log(availableMoves);
+        let availableMoves = getMoves(newBoard);
+        console.log("spots: " + availableMoves.length);
 
-        let winner = checkWinner.decideWinner(currentBoard) 
-        // console.log(winner === humanPlayer);
-        if (winner === humanPlayer) {
-            return {score: -10};
-        } else if (winner === computerPlayer) {
-            return {score: 10};
-        } else if (availableMoves.length === 0) {
+        // await new Promise(resolve => setTimeout(resolve, 60000));
+        // window.location.reload();
+        // console.log(humanPlayer, computerPlayer);
+        // console.log(currentBoard);
+        let winner = checkWinner.decideWinner(newBoard); 
+        // console.log(winner);
+
+
+        if (winner === "tie" || availableMoves.length === 0) {
+            // console.log(winner, currentBoard);
             return {score: 0};
+        } else if (winner !== null) {
+            if (winner === computerPlayer) {
+                return {score: 10};
+            } else if (winner === humanPlayer) {
+                return {score: -10};
+            }
         }
         let moves = [];
-        availableMoves.forEach((availabelMove) => {
-            let move = {};
-            move.row = availabelMove[0];
-            move.col = availabelMove[1];
-            currentBoard[move.row][move.col] = player;
-            if (mark === computerPlayer) {
-                let result = getMinimaxMove(currentBoard, humanPlayer);
-                move.score = result.score;
-            } else {
-                let result = getMinimaxMove(currentBoard, computerPlayer);
-                move.score = result.score;
-            }
-            currentBoard[move.row][move.col] = null;
-            moves.push(move);
-        });
 
-        bestMove = getBestMove(moves, mark);
-        console.log(bestMove);
+        for (let i = 0; i < availableMoves.length; i++) {
+            console.log("i: " + i);
+            let move = {};
+            move.index = availableMoves[i];
+
+            newBoard[availableMoves[i]] = mark;
+        
+            if (mark === computerPlayer) {
+                // console.log("mark: " + mark);
+                // console.log("newBoard: " + newBoard);
+                let result = getMinimaxMove(newBoard, humanPlayer);
+                move.score = result.score;
+                console.log(computerPlayer, move);
+            } else {
+                console.log("mark: " + mark);
+                let result = getMinimaxMove(newBoard, computerPlayer);
+                move.score = result.score;
+                console.log(humanPlayer, move);
+            }
+
+            newBoard[availableMoves[i]] = move.index;
+            checkWinner.resetCheckWinner();
+            
+            moves.push(move);
+            // console.log("moves: " + moves[0].score, moves[0].index);
+        }
+  
+        // console.log(moves);
+        let currentBestMove = getBestMove(moves, mark);
+
+        // console.log(currentBestMove);
+        if (currentBestMove > bestMove) {
+            bestMove = currentBestMove;
+        }
+        // console.log(bestMove);
+        // console.log(moves);
+        // await new Promise(resolve => setTimeout(resolve, 60000));
+        // window.location.reload();
+
+        // console.log(bestMove);
         return bestMove;
     }
     
-    const getMoves = (currentBoard) => {
-        // get all available moves
-        let moves = [];
-
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
-                if (currentBoard[i][j] === null) {
-                    moves.push([i, j]);
-                }
-            }
-        }
-
-        console.log("moves: " + moves);
-        return moves;
+    const getMoves = (board) => {
+        // console.log("moves: " + moves);
+        return board.filter(s => s != "O" && s != "X");
     }
     
     const getBestMove = (moves, mark) => {
         // get the best move
         let bestMove = null;
+        // console.log(mark === computer.getComputerMark())
         if(mark === computer.getComputerMark()) {
             let bestScore = -Infinity;
             moves.forEach((move) => {
+                // console.log(mark + ": " + move.score);
                 if (move.score > bestScore) {
                     bestScore = move.score;
                     bestMove = move;
@@ -669,12 +672,14 @@ var minimax = (function() {
         } else {
             let bestScore = Infinity;
             moves.forEach((move) => {
+                // console.log(mark + ": " + move.score);
                 if (move.score < bestScore) {
                     bestScore = move.score;
                     bestMove = move;
                 }
             });
         }
+        // console.log(bestMove);
         return bestMove;
     }
 
