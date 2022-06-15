@@ -145,7 +145,8 @@ var game = (function (){
         start: start,
         updateBoard: updateBoard,
         getCells: getCells,
-        resetGame: resetGame
+        resetGame: resetGame,
+        getGameBoard: () => gameBoard
     };
 })();
 
@@ -487,6 +488,7 @@ var cleanUp = (function() {
         cleanUpComputer();
         cleanUpPlayer();
         cleanUpGame();
+        cleanUpAiLogic();
         game.start(mark.toLowerCase(), level);
     }
 
@@ -512,6 +514,10 @@ var cleanUp = (function() {
         
     const cleanUpWinningCells = () => {
         displayController.removeWinningCells();
+    }
+
+    const cleanUpAiLogic = () => {
+        aiLogic.resetAiLogic();
     }
 
     return {
@@ -567,7 +573,7 @@ var moves = (function() {
     }
 
     const getImpossibleMove = (currentBoard, mark) => {
-        let move = minimax.getMinimaxMove(currentBoard, mark);
+        let move = aiLogic.getMinimaxMove(currentBoard, mark);
         // console.log(move);
         return move;
     }
@@ -577,113 +583,112 @@ var moves = (function() {
         getEasyMove: getEasyMove,
         getImpossibleMove: getImpossibleMove
     }
-})()
+})();
 
-var minimax = (function() {
-    
-    const getMinimaxMove = (newBoard, mark) => {    
-        let humanPlayer = player.getPlayerMark();
-        let computerPlayer = computer.getComputerMark();
-        let bestMove = null;
-        let availableMoves = getMoves(newBoard);
-        console.log("spots: " + availableMoves.length);
+var aiLogic = (function() {
+    let humanPlayer = null;
+    let computerPlayer = null;
 
-        // await new Promise(resolve => setTimeout(resolve, 60000));
-        // window.location.reload();
-        // console.log(humanPlayer, computerPlayer);
-        // console.log(currentBoard);
-        let winner = checkWinner.decideWinner(newBoard); 
+    const getMinimaxMove = (currentBoard, mark) => {
+        humanPlayer= player.getPlayerMark();
+        computerPlayer = computer.getComputerMark();
+        let minimaxMove = minimax(currentBoard, mark);
+        console.log(minimaxMove);
+        return minimaxMove["index"];
+    }
+
+    const minimax = (newBoard, currentPlayer) => {
+          //available spots
+        let possibleMoves = emptySpots(newBoard);
+        let winner = checkWinner.decideWinner(newBoard, currentPlayer);
+        let bestMove = {};
+        // console.log(newBoard);
         // console.log(winner);
-
-
-        if (winner === "tie" || availableMoves.length === 0) {
-            // console.log(winner, currentBoard);
+        // checks for the terminal states such as win, lose, and tie and returning a value accordingly
+        if (winner === "tie" || possibleMoves.length === 0) {
             return {score: 0};
-        } else if (winner !== null) {
-            if (winner === computerPlayer) {
-                return {score: 10};
-            } else if (winner === humanPlayer) {
-                return {score: -10};
+        }
+        else if (winner !== null) {
+            if (winner === computerPlayer){
+                return {score:10};
+            }
+            else{
+                return {score:-10};
             }
         }
+
+        // an array to collect all the objects
         let moves = [];
 
-        for (let i = 0; i < availableMoves.length; i++) {
-            console.log("i: " + i);
-            let move = {};
-            move.index = availableMoves[i];
+        // loop through available spots
+        for (let i = 0; i < possibleMoves.length; i++){
+            //create an object for each and store the index of that spot that was stored as a number in the object's index key
+            var move = {};
+            move.index = newBoard[possibleMoves[i]];
 
-            newBoard[availableMoves[i]] = mark;
-        
-            if (mark === computerPlayer) {
-                // console.log("mark: " + mark);
-                // console.log("newBoard: " + newBoard);
-                let result = getMinimaxMove(newBoard, humanPlayer);
+            // set the empty spot to the current player
+            newBoard[possibleMoves[i]] = currentPlayer;
+
+            //if collect the score resulted from calling minimax on the opponent of the current player
+            if (currentPlayer == computerPlayer){
+                var result = minimax(newBoard, humanPlayer);
                 move.score = result.score;
-                console.log(computerPlayer, move);
-            } else {
-                console.log("mark: " + mark);
-                let result = getMinimaxMove(newBoard, computerPlayer);
+            }
+            else{
+                var result = minimax(newBoard, computerPlayer);
                 move.score = result.score;
-                console.log(humanPlayer, move);
             }
 
-            newBoard[availableMoves[i]] = move.index;
+            //reset the spot to empty
+            newBoard[possibleMoves[i]] = move.index;
             checkWinner.resetCheckWinner();
-            
+            // push the object to the array
             moves.push(move);
-            // console.log("moves: " + moves[0].score, moves[0].index);
         }
-  
         // console.log(moves);
-        let currentBestMove = getBestMove(moves, mark);
-
-        // console.log(currentBestMove);
-        if (currentBestMove > bestMove) {
-            bestMove = currentBestMove;
-        }
-        // console.log(bestMove);
-        // console.log(moves);
-        // await new Promise(resolve => setTimeout(resolve, 60000));
-        // window.location.reload();
-
+        // return the chosen move (object) from the array to the higher depth
+        bestMove = getBestMove(moves, currentPlayer);
+        
         // console.log(bestMove);
         return bestMove;
     }
-    
-    const getMoves = (board) => {
-        // console.log("moves: " + moves);
-        return board.filter(s => s != "O" && s != "X");
+
+    const emptySpots = (board) => {
+        return board.filter(spot => typeof spot === "number");
     }
-    
+
     const getBestMove = (moves, mark) => {
+        // console.log(moves);
         // get the best move
-        let bestMove = null;
+        let bestMove;
         // console.log(mark === computer.getComputerMark())
-        if(mark === computer.getComputerMark()) {
-            let bestScore = -Infinity;
-            moves.forEach((move) => {
-                // console.log(mark + ": " + move.score);
-                if (move.score > bestScore) {
-                    bestScore = move.score;
-                    bestMove = move;
+        if(mark === computerPlayer) {
+            let bestScore = -10000;
+            for (let i = 0; i < moves.length; i++) {
+                if (moves[i].score > bestScore) {
+                    bestScore = moves[i].score;
+                    bestMove = i;
                 }
-            });
+            }
         } else {
-            let bestScore = Infinity;
-            moves.forEach((move) => {
-                // console.log(mark + ": " + move.score);
-                if (move.score < bestScore) {
-                    bestScore = move.score;
-                    bestMove = move;
+            let bestScore = 10000;
+            for (let i = 0; i < moves.length; i++) {
+                if (moves[i].score < bestScore) {
+                    bestScore = moves[i].score;
+                    bestMove = i;
                 }
-            });
+            };
         }
-        // console.log(bestMove);
-        return bestMove;
+        // console.log(moves[bestMove]);
+        return moves[bestMove];
     }
-
+    const resetAiLogic = () => {
+        humanPlayer = null;
+        computerPlayer = null;
+    }
     return {
+        resetAiLogic: resetAiLogic,
         getMinimaxMove: getMinimaxMove
     }
-})()
+
+})();
