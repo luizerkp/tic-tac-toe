@@ -13,22 +13,25 @@
     <header class="header">
         <h1>Tic Tac Toe</h1>
         <div class="choices">
-            <select class="select-menu" name="difficulty-menu" id="difficulty-level">
-                <option value="disabled"  selected disabled>Difficulty</option>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-                <option value="impossible">Impossible</option>
-            </select>
+            <div class="select-div">
+                <select class="select-menu" name="difficulty-menu" id="difficulty-level">
+                    <option value="disabled"  selected disabled>Difficulty</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                    <option value="impossible">Impossible</option>
+                </select>
+                <select class="select-menu" name="weapon" id="weapons">
+                    <option value="disabled"  selected disabled>Weapon</option>
+                    <option value="x">X</option>
+                    <option value="o">O</option>
+                </select>                               
+            </div>
             <div class="btns-div">
                 <button class="glow-on-hover" id="start">Start</button>
                 <button class="glow-on-hover" id="reset-button">Reset</button>
             </div>
-            <select class="select-menu" name="weapon" id="weapons">
-                <option value="disabled"  selected disabled>Weapon</option>
-                <option value="x">X</option>
-                <option value="o">O</option>
-            </select>
+
         </div>
     </header>
     <main class="container">

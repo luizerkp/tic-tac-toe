@@ -24,11 +24,11 @@ body {
     column-gap: 3rem;
 }
 
-.btns-div {
+.btns-div, .select-div {
     display: flex;
     column-gap: 3rem;
 }
-.choices > select, .btns-div > button {
+.select-div > select, .btns-div > button {
     cursor: pointer;
 }
 
@@ -188,7 +188,7 @@ body {
 
 /* glowing buttons source: https://alvarotrigo.com/blog/best-css-button-hover-effects/ */
 .glow-on-hover {
-    width: 100px;
+    width: 150px;
     padding: 10px;
     font-size: 1.5rem;
     font-weight: bold;
@@ -264,6 +264,7 @@ body {
     font-size: 1.35rem;
     font-weight: bold;
     padding: 10px;
+    width: 150px;
 
 }
 /* Sticky Footer and credit */
@@ -297,25 +298,31 @@ body {
         font-size: 1.5rem;
     }
 
-    .choices, .btns-div {
-        column-gap: 1rem;
+    .choices, .select-div, .btns-div {
+        column-gap: .5rem;
     }
-    .choices > select, .btns-div > button, .glow-on-hover {
+    .select-div > select, .btns-div > button, .glow-on-hover {
         font-size: 1rem;
+    }
+    .select-menu, .glow-on-hover {
+        width: 130px;
     }
 }
 
-@media only screen and (max-width: 500px) {
+@media only screen and (max-width: 600px) {
     .header {
         padding-bottom: .7rem ;
         min-height: 10vh;
         font-size: 1.2rem;
     }
-
-    .choices, .btns-div {
-        column-gap: .8rem;
+    .choices {
+        flex-direction: column;
+        row-gap: 1rem;
     }
-    .choices > select, .btns-div > button, .glow-on-hover {
+    .select-div, .btns-div {
+        column-gap: .5rem;
+    }
+    .select-div > select, .btns-div > button, .glow-on-hover {
         font-size: .9rem;
     }
 
@@ -334,4 +341,5 @@ body {
         height: auto;
     }
 }
+
 
