@@ -32,7 +32,7 @@ var Selections = (function() {
         }
 
         // if user changes the selection values using devtools, reload the page
-        if (!validate.checkValidSelectionsValues(weaponSelection.value, difficultySelection.value)) {
+        if (!validate.checkValidSelectionsValues(weaponSelection, difficultySelection)) {
             return window.location.reload();
         };
 
@@ -47,7 +47,7 @@ var Selections = (function() {
 
 })();
 
-// handles game logic
+// handles game events and keeps track of the game state
 var game = (function (){
     let difficulty = null;
     let winner = null;
@@ -67,13 +67,12 @@ var game = (function (){
     const addCellEvents = () => {
         cells.forEach(cell => {
             cell.addEventListener('click', function() {
-                
                 if (cell.textContent !== '') {
                     return;
                 }
 
                 let cellNumber = cell.getAttribute('data-cell');
-                cellNumber = parseInt(cellNumber);
+                cellNumber = parseInt(cellNumber, 10);
 
                 player.playerTurn(cellNumber);
                 winner= checkWinner.decideWinner(gameBoard);       
@@ -135,23 +134,14 @@ var game = (function (){
         // triggers the cleanUp module to restart the game
         playAgainBtn.addEventListener('click', () => {
             modal.classList.remove("show-modal");
-            console.log('play again difficulty: ' + difficulty);
             return cleanUp.cleanUpBoard(player.getPlayerMark(), difficulty);
         }); 
-    }
-
-    // resets game module
-    const resetGame = () => {
-        winner = null;
-        gameBoard = null;
-        difficulty = null;
     }
 
     return {
         start: start,
         updateBoard: updateBoard,
         getCells: getCells,
-        resetGame: resetGame,
         getGameBoard: () => gameBoard
     };
 })();
@@ -171,28 +161,50 @@ var board = (function() {
     }
 })();
 
+// validates that a user has not change the values of the selections in devtools
 var validate = (function() {
-    // helper functions to check if a user has changed the selection values via devtools
-    function checkValidSelectionsValues(weaponScelectionValue, difficultySelectionValue) {
-        let valid = true;
-        
-        weaponScelectionValue = weaponScelectionValue.toLowerCase();
-        difficultySelectionValue = difficultySelectionValue.toLowerCase();
+    // current selection values for #weapons and #difficulty-level
+    const difficulties = ['easy', 'medium', 'hard', 'impossible'];
+    const weapons = ['x', 'o'];
+    let valid = true;
 
-        // current selection values for #weapons and #difficulty-level
-        const difficulties = ['easy', 'medium', 'hard', 'impossible'];
-        const weapons = ['x', 'o'];
-        
-        if (!difficulties.includes(difficultySelectionValue)){
-            valid = false;
-            alert("Please do not change selection values for difficulty level. This page will be reloaded");
-        } else if (!weapons.includes(weaponScelectionValue)) {
-            valid = false;
-            alert("Please do not change selection values for weapon. This page will be reloaded");
+    // helper functions to check if a user has changed the selection values via devtools
+    function checkValidSelectionsValues(weaponSelection, difficultySelection) {
+        let selections = {
+            weaponValue: weaponSelection.value.toLowerCase(),
+            difficultyValue: difficultySelection.value.toLowerCase(),
+            weaponText: weaponSelection.options[weaponSelection.selectedIndex].text.toLowerCase(),
+            difficultyText: difficultySelection.options[difficultySelection.selectedIndex].text.toLowerCase()
         }
+
+        checkSelectionValues(selections.weaponValue, selections.difficultyValue);
+        checkSelectionText(selections);
 
         return valid;
     }
+
+    const checkSelectionValues = (weaponSelectionValue, difficultySelectionValue) => {
+        if (!difficulties.includes(difficultySelectionValue)){
+            valid = false;
+            alert("Please do not change selection values for difficulty level. This page will be reloaded");
+        }
+        if (!weapons.includes(weaponSelectionValue)) {
+            valid = false;
+            alert("Please do not change selection values for weapon. This page will be reloaded");
+        }
+    }
+
+    const checkSelectionText = (selections) => {
+        if (selections.weaponText !== selections.weaponValue) {
+            valid = false;
+            alert("Please do not change selection text for weapon. This page will be reloaded");
+        }
+        if (selections.difficultyText !== selections.difficultyValue) {
+            valid = false;
+            alert("Please do not change selection text for difficulty level. This page will be reloaded");
+        }
+    }
+
     return {
         checkValidSelectionsValues: checkValidSelectionsValues
     }
@@ -262,7 +274,6 @@ var player = (function() {
     }
 
     const playerTurn = (number) => {
-        // console.log(`Player ${playerMark} has chosen cell ${number}`);
         const cell = document.querySelector(`[data-cell="${number}"]`);
         const para = document.createElement('p');
         para.textContent = playerMark;
@@ -275,14 +286,10 @@ var player = (function() {
         return playerMark;
     }
 
-    const resetPlayer = () => {
-        playerMark = null;
-    }
     return {
         setPlayer: setPlayer,
         playerTurn: playerTurn,
-        getPlayerMark: getPlayerMark,
-        resetPlayer: resetPlayer
+        getPlayerMark: getPlayerMark
     }
 })();
 
@@ -325,24 +332,17 @@ var computer = (function() {
         return computerMark;
     }
 
-    const resetComputer = () => {
-        computerMove = null;
-        computerMark = null;
-    }
-
     return {
         computerTurn: computerTurn,
         setComputer: setComputer,
-        getComputerMark: getComputerMark,
-        resetComputer: resetComputer
+        getComputerMark: getComputerMark
     };
 })();
 
 var checkWinner = (function() {
     let winner = null;
-    
-
     const cells = ["first", "second" , "third"];
+
     let winningCells = {
         first: null,
         second: null,
@@ -463,27 +463,11 @@ var cleanUp = (function() {
         cleanUpGameFlow();
         cleanUpWinningCells();
         cleanUpCheckWinner();
-        cleanUpComputer();
-        cleanUpPlayer();
-        cleanUpGame();
-        cleanUpAiLogic();
         game.start(mark.toLowerCase(), level);
     }
 
     const cleanUpCheckWinner = () => {
         checkWinner.resetCheckWinner();
-    }
-
-    const cleanUpComputer = () => {
-        computer.resetComputer();
-    }
-
-    const cleanUpPlayer = () => {
-        player.resetPlayer();
-    }
-
-    const cleanUpGame = () => {
-        game.resetGame();
     }
 
     const cleanUpGameFlow = () => {
@@ -494,14 +478,10 @@ var cleanUp = (function() {
         displayController.removeWinningCells();
     }
 
-    const cleanUpAiLogic = () => {
-        aiLogic.resetAiLogic();
-    }
-
     return {
         cleanUpBoard: cleanUpBoard
     }
-})()
+})();
 
 // locks out clicks on the board while computer is making a move or while winner is being decided
 var gameFlow = (function() {
@@ -539,6 +519,7 @@ var gameFlow = (function() {
     }
 })();
 
+// handles the how the ai will make its move depending on the difficulty level
 var moves = (function() {
     const getMove = (currentBoard, difficulty, mark) => {
         let move = moveHandler(currentBoard, difficulty, mark);
@@ -578,12 +559,12 @@ var moves = (function() {
                 move = moves.randomMove;
                 break;
             case "medium":
-                // in medium difficulty the AI will have a ~60% chance of choosing the best move
-                 move = Math.random() < 0.6 ? moves.bestMove : moves.randomMove;
+                // in medium difficulty the AI will have a ~70% chance of choosing the best move
+                 move = Math.random() < 0.7 ? moves.bestMove : moves.randomMove;
                 break;
             case "hard":
-                // in hard difficulty the AI will have a ~85% chance to choose the best move
-                move = Math.random() < 0.85 ? moves.bestMove : moves.randomMove;
+                // in hard difficulty the AI will have a ~90% chance to choose the best move
+                move = Math.random() < 0.9 ? moves.bestMove : moves.randomMove;
                 break;
             case "impossible":             
                 // in impossible difficulty the AI will always choose the best move
@@ -601,6 +582,7 @@ var moves = (function() {
     }
 })();
 
+// handles minimax algorithm
 var aiLogic = (function() {
     let humanPlayer = null;
     let computerPlayer = null;
@@ -701,13 +683,8 @@ var aiLogic = (function() {
 
         return moves[bestMove];
     }
-    const resetAiLogic = () => {
-        humanPlayer = null;
-        computerPlayer = null;
-    }
 
     return {
-        resetAiLogic: resetAiLogic,
         getMinimaxMove: getMinimaxMove
     }
 })();
